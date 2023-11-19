@@ -12,6 +12,8 @@ enum State {
   StateStop,
   StateStart,
   StateForward,
+  StateCourseCorrectLeft,
+  StateCourseCorrectRight,
   StateTurnLeft,
   StateTurnRight,
   StateTurnApproaching,
@@ -37,6 +39,7 @@ void setup()
 
   pinMode( DEBUG_RED, OUTPUT );
   pinMode( DEBUG_GREEN, OUTPUT );
+  pinMode( DEBUG_BLUE, OUTPUT );
 
   #ifdef SerialDebugMode
   Serial.begin( 9600 );
@@ -62,6 +65,12 @@ void loop()
     case StateForward:
       forward();
       break;
+    case StateCourseCorrectLeft:
+      courseCorrectLeft();
+      break;
+    case StateCourseCorrectRight:
+      courseCorrectRight();
+      break;
     case StateTurnLeft:
       turnLeft();
       break;
@@ -74,15 +83,21 @@ void loop()
     case StateTurnEnding:
       turnEnding();
   }
+  #ifdef SerialDebugMode
+  Serial.println();
+  #endif
 } // end Loop()
 
 
 void checkSensors()
-{
+{  
+  digitalWrite( DEBUG_BLUE, LOW );
+  
   sensorCount++;
   leftSensorDistance = leftSensor.measureInches();
   rightSensorDistance = rightSensor.measureInches();
-  if (sensorCount >= FrontSensorPollDivsor) { // Poll Front Every 3rd Reading
+  if (sensorCount >= FrontSensorPollDivsor)  // Poll Front Every 3rd Reading
+  {
     sensorCount = 0;
     frontSensorDistance = frontSensor.measureInches();
   }
@@ -93,19 +108,30 @@ void checkSensors()
   Serial.print( " | Right: ");
   Serial.print( rightSensorDistance);
   Serial.print( " | Front: ");
-  Serial.println( frontSensorDistance);
+  Serial.print( frontSensorDistance);
   #endif
+  
+  digitalWrite( DEBUG_BLUE, HIGH );
 } // end checkSensors()
 
 
 void stop()
 {
+  #ifdef SerialDebugMode
+    Serial.print( " Stop ");
+  #endif 
+  
   leftMotor.run(  Motor::MotorStop );
   rightMotor.run( Motor::MotorStop );
 } // end stop()
 
+
 void start()
 {
+  #ifdef SerialDebugMode
+    Serial.print( " Start ");
+  #endif 
+ 
   static int Speed = MinimumSpeed;
   leftMotor.setSpeed(  Speed );
   rightMotor.setSpeed( Speed );
@@ -132,96 +158,162 @@ void start()
   Speed+=RampSpeedIncrement;
 } // end start()
 
+
 void forward()
-{  
-  static int adjustmentTimeout = 0;
-  static float priorDifference = 0;
-  
-  // Update Future State as needed
-  if ( frontSensorDistance < FrontTurnApproachingDistance && frontSensorDistance > MinimumSensorDistance )
-    currentState = StateTurnApproaching;
-  if ( frontSensorDistance < FrontStopDistance && frontSensorDistance > MinimumSensorDistance )
-    currentState = StateStop;
-
-  // Course Correcting Code
-  float currentDifference = leftSensorDistance - rightSensorDistance;
-
+{    
   #ifdef SerialDebugMode
-  Serial.print("Prior Difference: ");
-  Serial.print(priorDifference);
-  Serial.print(" Current Difference: ");
-  Serial.println(currentDifference);
+    Serial.print( " Forward ");
+  #endif 
+
+  // Update Future State as needed
+  float currentDifference = leftSensorDistance - rightSensorDistance;
+  checkForStateChange();
+  
+  #ifdef SerialDebugMode
+  Serial.print(" - Current Difference: ");
+  Serial.print(currentDifference);
   #endif
 
-  if ( currentDifference > SignificantSensorDeviation || rightSensorDistance == UltrasonicTimeoutReturnDistance )  // Robot deviating to the right
-  {    
-    // Course Correct every <adjustmentTimeoutLimit> loops
-    if (adjustmentTimeout)
-    { 
-      adjustmentTimeout++;
-      if (adjustmentTimeout > AdjustmentTimeoutLimit)
-          adjustmentTimeout = 0;
-    }
-    else
-    { // Compare prior difference to current difference - if difference is lessening, don't adjust
-      if ( priorDifference <= currentDifference || rightSensorDistance == UltrasonicTimeoutReturnDistance )
-      {
-        digitalWrite( DEBUG_RED,  HIGH  );
-        digitalWrite( DEBUG_GREEN, LOW );  // LEFT RED
-        leftMotor.decrementSpeed();  // Turn left
-        #ifdef SerialDebugMode
-        Serial.println("Diff > 1: Adjusting to the left...");
-        #endif
-      }
-      priorDifference = currentDifference;
-    }
-  }
-  else if ( currentDifference < -SignificantSensorDeviation || leftSensorDistance == UltrasonicTimeoutReturnDistance ) // Robot deviating to the left
+  if ( currentDifference > SignificantSensorDeviation  )  // Robot deviating to the right
   { 
-    // Course Correct every <AdjustmentTimeoutLimit> loops
-    if (adjustmentTimeout)
-    {
-      adjustmentTimeout++;
-      if (adjustmentTimeout > AdjustmentTimeoutLimit)
-          adjustmentTimeout = 0;
-    }
-    else
-    { // Compare prior difference to current difference - if difference is lessening, don't adjust
-      if ( priorDifference >= currentDifference || leftSensorDistance == UltrasonicTimeoutReturnDistance )
-      {
-        digitalWrite( DEBUG_RED,  LOW  );
-        digitalWrite( DEBUG_GREEN, HIGH );  // RIGHT GREEN
-        leftMotor.incrementSpeed(); // Turn Right
-        #ifdef SerialDebugMode
-        Serial.println("Diff < -1: Adjusting to the right...");
-        #endif
-      }
-      priorDifference = currentDifference;
-    }
+    currentState = StateCourseCorrectLeft;
   }
-  else // Within acceptable L/R deviation
-  {
-    digitalWrite( DEBUG_RED,   LOW );
-    digitalWrite( DEBUG_GREEN, LOW );
+  else if ( currentDifference < -SignificantSensorDeviation ) // Robot deviating to the left
+  { 
+    currentState = StateCourseCorrectRight;
   }
 
 } // end forward()
 
 
-void turnLeft()
+void checkForStateChange()
 {
-  leftMotor.setSpeed( TurnSpeedSlow );
-  rightMotor.setSpeed( TurnSpeedFast );
-  currentState = StateTurnEnding;
-} // end turnLeft()
+  if ( frontSensorDistance < FrontTurnApproachingDistance && frontSensorDistance > MinimumSensorDistance )
+    currentState = StateTurnApproaching;
+  if ( frontSensorDistance < FrontStopDistance && frontSensorDistance > MinimumSensorDistance )
+    currentState = StateStop;
+} // end checkForStateChange()
 
 
-void turnRight()
+// Too far right
+void courseCorrectLeft()
 {
-  leftMotor.setSpeed( TurnSpeedFast );
-  rightMotor.setSpeed( TurnSpeedSlow );
-  currentState = StateTurnEnding;
-} // end turnRight()
+  #ifdef SerialDebugMode
+    Serial.print( " CC Left ");
+  #endif 
+
+  digitalWrite( DEBUG_RED, HIGH );
+  
+  static int adjustmentTimeout = 0;
+  static float priorDifference = 0;
+  static float filteredRightSensorDistance = UltrasonicMaxDistance;
+
+  if (rightSensorDistance < (filteredRightSensorDistance * SensorChangeMultiplier))
+    filteredRightSensorDistance = rightSensorDistance;
+  float currentDifference = leftSensorDistance - filteredRightSensorDistance;
+
+  checkForStateChange();
+  // Course Correct every <adjustmentTimeoutLimit> loops
+  if (adjustmentTimeout)
+  { 
+    adjustmentTimeout++;
+    if (adjustmentTimeout > AdjustmentTimeoutLimit)
+        adjustmentTimeout = 0;
+  }
+  else
+  { 
+    // Check if angle is too large, catching overcorrection
+    float sensorSum = leftSensorDistance + rightSensorDistance;
+    if( sensorSum > MaxAngledDistance ) 
+    {
+      leftMotor.incrementSpeed();  
+     
+      #ifdef SerialDebugMode
+        Serial.print( " | Angle too large!");
+      #endif
+    }
+    // Compare prior difference to current difference - if difference is lessening, don't adjust
+    else if( priorDifference <= currentDifference )
+    {
+      leftMotor.decrementSpeed();  // Turn left
+      #ifdef SerialDebugMode
+      Serial.print(" | Diff > 1: Adjusting to the left...");
+      #endif
+    }
+      
+      // Angle OK, position improving
+    else if ( priorDifference > currentDifference )
+    {
+      currentState = StateForward;
+    }
+
+    priorDifference = currentDifference;
+  } // end adjustmentTimeout == 0;
+  
+  digitalWrite( DEBUG_RED, LOW );  // LEFT RED LED OFF
+} // end courseCorrectLeft()
+
+
+// Too far left
+void courseCorrectRight()
+{
+  #ifdef SerialDebugMode
+    Serial.print( " CC Right ");
+  #endif 
+
+  digitalWrite( DEBUG_GREEN, HIGH );  // RIGHT GREEN
+
+  static int adjustmentTimeout = 0;
+  static float priorDifference = 0;
+  static float filteredLeftSensorDistance = UltrasonicMaxDistance;
+
+  if (leftSensorDistance < (filteredLeftSensorDistance * SensorChangeMultiplier))
+    filteredLeftSensorDistance = leftSensorDistance;
+
+  float currentDifference = filteredLeftSensorDistance - rightSensorDistance;
+  
+  checkForStateChange();
+
+  // Course Correct every <AdjustmentTimeoutLimit> loops
+  if (adjustmentTimeout)
+  {
+    adjustmentTimeout++;
+    if (adjustmentTimeout > AdjustmentTimeoutLimit)
+        adjustmentTimeout = 0;
+  }
+  else
+  { 
+    float sensorSum = filteredLeftSensorDistance + rightSensorDistance;
+    
+    if( sensorSum > MaxAngledDistance ) 
+    {
+      leftMotor.decrementSpeed();  // Angle is too large, start angle reduction.
+
+      #ifdef SerialDebugMode
+        Serial.print( " | Angle too large!");
+      #endif
+    }
+    
+    // Compare prior difference to current difference - if difference is lessening, don't adjust
+    else if( priorDifference >= currentDifference )
+    {
+      leftMotor.incrementSpeed(); // Turn Right
+      #ifdef SerialDebugMode
+      Serial.print(" | Diff < -1: Adjusting to the right...");
+      #endif
+    }
+
+      // Angle OK, position improving
+    else if ( priorDifference < currentDifference )
+    {
+      currentState = StateForward;
+    }
+
+    priorDifference = currentDifference;
+  } // end adjustmentTimeout == 0
+
+  digitalWrite( DEBUG_GREEN, LOW );
+} // end courseCorrectRight()
 
 
 /*
@@ -231,8 +323,13 @@ void turnRight()
  */
 void turnApproaching()
 { 
-  digitalWrite( DEBUG_RED,   LOW );
-  digitalWrite( DEBUG_GREEN, LOW );
+  #ifdef SerialDebugMode
+    Serial.print( " Pre-Turn ");
+  #endif 
+
+  digitalWrite( DEBUG_RED,   HIGH );
+  digitalWrite( DEBUG_GREEN, HIGH );
+
 
   if( frontSensorDistance < FrontTurnStartDistance ) // Incoming wall less than 15"
   {
@@ -247,8 +344,37 @@ void turnApproaching()
   }
 } // end turnApproaching()
 
+
+void turnLeft()
+{
+  #ifdef SerialDebugMode
+    Serial.print( " Turn Left ");
+  #endif 
+
+  leftMotor.setSpeed( TurnSpeedSlow );
+  rightMotor.setSpeed( TurnSpeedFast );
+  currentState = StateTurnEnding;
+} // end turnLeft()
+
+
+void turnRight()
+{
+  #ifdef SerialDebugMode
+    Serial.print( " Turn Right ");
+  #endif 
+
+  leftMotor.setSpeed( TurnSpeedFast );
+  rightMotor.setSpeed( TurnSpeedSlow );
+  currentState = StateTurnEnding;
+} // end turnRight()
+
+
 void turnEnding()
 {
+  #ifdef SerialDebugMode
+    Serial.print( " Post-Turn ");
+  #endif 
+
   static int turnDelayCounter = 0;
   static int finishDelayCounter = 0;
   if( turnDelayCounter < TurnEndingDelay )

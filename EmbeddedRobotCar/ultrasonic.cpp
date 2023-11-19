@@ -55,7 +55,7 @@ public:
     
     if ( distance < 0.01 )
       return UltrasonicTimeoutReturnDistance;
-    else if ( distance < UltrasonicTimeoutReturnDistance )
+    else if ( distance > UltrasonicTimeoutReturnDistance )
       return UltrasonicTimeoutReturnDistance;
     
     return distance;

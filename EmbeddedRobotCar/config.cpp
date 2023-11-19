@@ -7,8 +7,8 @@
 // ----------- CONFIGURATION CONSTANTS ----------- //
 // Ultrasonic Sensors
 #define FrontSensorPollDivsor 3
-#define UltrasonicMaxDistance 35
-#define UltrasonicTimeoutReturnDistance 65.0
+#define UltrasonicMaxDistance 40.0
+#define UltrasonicTimeoutReturnDistance UltrasonicMaxDistance
 
 // State Change Parameters
 #define MinimumSensorDistance 0.1
@@ -23,17 +23,19 @@
 #define StartSpeed (MaxAdjustSpeed + MinAdjustSpeed) / 2
 #define RampSpeedIncrement 2
 #define MinimumSpeed 100
-#define TurnSpeedSlow 100
-#define TurnSpeedFast 255
+#define MinAdjustSpeed 100
+#define MaxAdjustSpeed 150
+#define TurnSpeedSlow 0
+#define TurnSpeedFast MaxAdjustSpeed
 
 
 // Course Correction Parameters
 #define AdjustmentTimeoutLimit 20
-#define MinAdjustSpeed 150
-#define MaxAdjustSpeed 250
 #define AdjustValue 2
 #define SignificantSensorDeviation 2.0
 #define SignificantCorrectionDeviation 0.2
+#define MaxAngledDistance 27.0
+#define SensorChangeMultiplier 2.0
 
 // ----------- PIN CONSTANTS ----------- //
 
@@ -62,6 +64,7 @@ const byte RIGHT_TRIG = A0; // Blue
 // Debug LED
 const byte DEBUG_RED = 11; // Black wire, Red LED
 const byte DEBUG_GREEN = 13; // Brown wire, Green LED
+const byte DEBUG_BLUE = 3; // Red wire, Blue LED
 // const byte DEBUG_B = ;
 
 #endif
