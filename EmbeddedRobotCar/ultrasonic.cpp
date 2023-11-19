@@ -19,7 +19,7 @@ public:
   {
     triggerPin = 0;
     echoPin = 0;
-    maxDuration = MAX_DISTANCE * 12 * 74 * 2;
+    maxDuration = UltrasonicMaxDistance * 74 * 2 * 12; 
   }
 
 
@@ -30,8 +30,9 @@ public:
   {
     triggerPin = sensorPin;
     echoPin = sensorPin;
-    maxDuration = MAX_DISTANCE * 12 * 74 * 2;
+    maxDuration = UltrasonicMaxDistance * 74 * 2 * 12; 
   }
+
 
   /*
    * 4-Pin Constructor
@@ -40,7 +41,7 @@ public:
   {
     triggerPin = tPin;
     echoPin = ePin;
-    maxDuration = MAX_DISTANCE * 12 * 74 * 2;
+    maxDuration = UltrasonicMaxDistance * 74 * 2 * 12; 
   }
 
 
@@ -50,7 +51,14 @@ public:
    */
   double measureInches()
   {
-    return  measure() / 74.0;
+    double distance = measure() / 74.0;
+    
+    if ( distance < 0.01 )
+      return UltrasonicTimeoutReturnDistance;
+    else if ( distance < UltrasonicTimeoutReturnDistance )
+      return UltrasonicTimeoutReturnDistance;
+    
+    return distance;
   }
 
 
@@ -60,8 +68,14 @@ public:
    */
   double measureCentimeters()
   {
-    return measure() / 29.1;
+    double distance = measure() / 29.1;
+
+    if( distance < 0.01 )
+      return UltrasonicTimeoutReturnDistance;
+    
+    return distance;
   }
+
 
 private: 
   /*
@@ -91,7 +105,7 @@ private:
     digitalWrite( triggerPin, LOW );
 
     pinMode( echoPin, INPUT );
-    duration = pulseIn( echoPin, HIGH );
+    duration = pulseIn( echoPin, HIGH, maxDuration );
 
     interrupts();
 

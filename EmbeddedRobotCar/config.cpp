@@ -2,15 +2,38 @@
 
 #ifndef configFile
 #define configFile
+
+//#define SerialDebugMode
 // ----------- CONFIGURATION CONSTANTS ----------- //
+// Ultrasonic Sensors
 #define FrontSensorPollDivsor 3
+#define UltrasonicMaxDistance 35
+#define UltrasonicTimeoutReturnDistance 65.0
 
+// State Change Parameters
+#define MinimumSensorDistance 0.1
+#define FrontStopDistance 5
+#define FrontTurnApproachingDistance 30
+#define FrontTurnStartDistance 25
+#define TurnEndingDelay 250
+#define FinishTurnDelay 100
+#define TurnEndingDeviation 10
+
+// Motor Speed Parameters
+#define StartSpeed (MaxAdjustSpeed + MinAdjustSpeed) / 2
+#define RampSpeedIncrement 2
+#define MinimumSpeed 100
+#define TurnSpeedSlow 100
+#define TurnSpeedFast 255
+
+
+// Course Correction Parameters
 #define AdjustmentTimeoutLimit 20
-
-#define StartSpeed 240
-#define MinAdjustSpeed 200
-#define MaxAdjustSpeed 255
-#define AdjustValue 1
+#define MinAdjustSpeed 150
+#define MaxAdjustSpeed 250
+#define AdjustValue 2
+#define SignificantSensorDeviation 2.0
+#define SignificantCorrectionDeviation 0.2
 
 // ----------- PIN CONSTANTS ----------- //
 
@@ -25,12 +48,10 @@ const byte H4A = 8; // Brown
 const byte H34EN = 6; // Black
 
 // Front Ultrasonic Sensor
-const byte FRONT_MAX_DISTANCE = 30;
 const byte FRONT_ECHO = A2; // Orange
 const byte FRONT_TRIG = A3; // Yellow
 
 // Left Ultrasonic Sensor
-const byte MAX_DISTANCE = 25;
 const byte LEFT_ECHO = A5; // White
 const byte LEFT_TRIG = A4; // Black
 
@@ -39,8 +60,8 @@ const byte RIGHT_ECHO = A1; // Green
 const byte RIGHT_TRIG = A0; // Blue
 
 // Debug LED
-const byte DEBUG_1 = 11; // Black wire, blue LED
-const byte DEBUG_2 = 13; // Brown wire, Green LED
+const byte DEBUG_RED = 11; // Black wire, Red LED
+const byte DEBUG_GREEN = 13; // Brown wire, Green LED
 // const byte DEBUG_B = ;
 
 #endif

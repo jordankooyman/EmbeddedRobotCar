@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "config.cpp"
 
 #ifndef motorFile
 #define motorFile
