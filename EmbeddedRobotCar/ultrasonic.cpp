@@ -53,9 +53,7 @@ public:
   {
     double distance = measure() / 74.0;
     
-    if ( distance < 0.01 )
-      return UltrasonicTimeoutReturnDistance;
-    else if ( distance > UltrasonicTimeoutReturnDistance )
+    if ( distance < 0.01 || distance > UltrasonicTimeoutReturnDistance )
       return UltrasonicTimeoutReturnDistance;
     
     return distance;

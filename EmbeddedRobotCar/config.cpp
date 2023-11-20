@@ -4,27 +4,34 @@
 #define configFile
 
 //#define SerialDebugMode
+//#define DisableTurn
 // ----------- CONFIGURATION CONSTANTS ----------- //
 // Ultrasonic Sensors
 #define FrontSensorPollDivsor 3
 #define UltrasonicMaxDistance 40.0
 #define UltrasonicTimeoutReturnDistance UltrasonicMaxDistance
+#define FrontSensorOffsetFromSideSensors 0.5
 
 // State Change Parameters
 #define MinimumSensorDistance 0.1
 #define FrontStopDistance 5
-#define FrontTurnApproachingDistance 30
+#define FrontTurnApproachingDistance 13
 #define FrontTurnStartDistance 25
-#define TurnEndingDelay 250
 #define FinishTurnDelay 100
-#define TurnEndingDeviation 10
+#define TurnStopSensorDeviation 1
+#define TurnExitedDeviation 20
 
 // Motor Speed Parameters
+#define LeftMotorOffset 20
+#define LeftMotorSpeedCompensation 0
+#define RightMotorSpeedCompensation 0
 #define StartSpeed (MaxAdjustSpeed + MinAdjustSpeed) / 2
+#define ForwardSpeed 225
+#define correctionFactor 10
 #define RampSpeedIncrement 2
-#define MinimumSpeed 100
-#define MinAdjustSpeed 100
-#define MaxAdjustSpeed 150
+#define MinimumSpeed 120
+#define MinAdjustSpeed 120
+#define MaxAdjustSpeed 235
 #define TurnSpeedSlow 0
 #define TurnSpeedFast MaxAdjustSpeed
 
@@ -67,4 +74,26 @@ const byte DEBUG_GREEN = 13; // Brown wire, Green LED
 const byte DEBUG_BLUE = 3; // Red wire, Blue LED
 // const byte DEBUG_B = ;
 
+// Check validity of parametric configurations
+#if MinAdjustSpeed < MinimumSpeed
+#error MinAdjustSpeed must be greater than or equal to MinimumSpeed
 #endif
+#if MaxAdjustSpeed > 255
+#error MaxAdjustSpeed must be less than or equal to 255
+#endif
+#if TurnSpeedFast > 255
+#error TurnSpeedFast must be less than or equal to 255
+#endif
+#if TurnSpeedSlow > TurnSpeedFast
+#error TurnSpeedSlow must be less than or equal to TurnSpeedFast
+#endif
+#if TurnSpeedSlow < 0
+#error TurnSpeedSlow must either be 0 or greater than or equal to MinimumSpeed
+#endif
+#if TurnSpeedSlow > 0 && TurnSpeedSlow < MinimumSpeed
+#error TurnSpeedSlow must either be 0 or greater than or equal to MinimumSpeed
+#endif
+#if LeftMotorSpeedCompensation < 0 && RightMotorSpeedCompensation < 0
+#error Only adjust LeftMotorSpeedCompensation or RightMotorSpeedCompensation, not both
+#endif
+#endif // End Header Guard
