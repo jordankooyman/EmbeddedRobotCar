@@ -7,10 +7,11 @@
 //#define DisableTurn
 // ----------- CONFIGURATION CONSTANTS ----------- //
 // Ultrasonic Sensors
-#define FrontSensorPollDivsor 3
+#define FrontSensorPollDivsor 2
 #define UltrasonicMaxDistance 40.0
 #define UltrasonicTimeoutReturnDistance UltrasonicMaxDistance
-#define FrontSensorOffsetFromSideSensors 0.5
+#define FrontSensorOffsetFromSideSensors -1.1
+#define FrontSensorPreturnOffset 4
 
 // State Change Parameters
 #define MinimumSensorDistance 0.1
@@ -18,8 +19,10 @@
 #define FrontTurnApproachingDistance 13
 #define FrontTurnStartDistance 25
 #define FinishTurnDelay 100
-#define TurnStopSensorDeviation 1
-#define TurnExitedDeviation 20
+#define TurnStopSensorDeviation 3
+#define TurnExitedDeviation 10
+#define TurnEndingDelayMS 200
+#define TurnEndCountDelay 20
 
 // Motor Speed Parameters
 #define LeftMotorOffset 20
@@ -32,8 +35,8 @@
 #define MinimumSpeed 120
 #define MinAdjustSpeed 120
 #define MaxAdjustSpeed 235
-#define TurnSpeedSlow 0
-#define TurnSpeedFast MaxAdjustSpeed
+#define TurnSpeed MinAdjustSpeed
+
 
 
 // Course Correction Parameters

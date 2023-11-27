@@ -19,7 +19,8 @@ public:
   enum MotorDirection {	
     MotorStop, 
     MotorForward, 
-    MotorReverse
+    MotorReverse,
+    MotorLock
   }; // enum MotorDirection
 
   // Default Constructor
@@ -53,7 +54,7 @@ public:
   inline void setSpeed( byte speed ) 
   { 
     speed = speed - _offset;
-    if (speed == 0 || (speed <= _MaxAdjustSpeed && speed => _MinAdjustSpeed))
+    if (speed == 0 || (speed <= _MaxAdjustSpeed && speed >= _MinAdjustSpeed))
       _speed = speed; 
     else if (speed < _MinAdjustSpeed)
       _speed = _MinAdjustSpeed;
@@ -78,7 +79,7 @@ public:
 
   void run( MotorDirection dir ) {
     switch( dir ) {
-      case MotorStop:
+      case MotorStop: // Free Running Motor Stop
         digitalWrite( _pin1,   LOW );
         digitalWrite( _pin2,   LOW );
         digitalWrite( _enable, LOW );
@@ -91,7 +92,12 @@ public:
       case MotorReverse:
         digitalWrite( _pin1,   LOW    );
         digitalWrite( _pin2,   HIGH   );
-        digitalWrite( _enable, _speed );
+        analogWrite(  _enable, _speed );
+        break;
+      case MotorLock: // Fast Motor Stop
+        digitalWrite( _pin1,   HIGH );
+        digitalWrite( _pin2,   HIGH );
+        digitalWrite( _enable, HIGH );
     } // set direction
   } // end run
 };

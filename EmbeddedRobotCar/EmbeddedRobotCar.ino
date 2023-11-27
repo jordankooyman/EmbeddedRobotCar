@@ -69,14 +69,6 @@ void loop()
       checkForStateChange();
       forward();
       break;
-    case StateCourseCorrectLeft:
-      checkForStateChange();
-      courseCorrectLeft();
-      break;
-    case StateCourseCorrectRight:
-      checkForStateChange();
-      courseCorrectRight();
-      break;
     case StateTurnLeft:
       turnLeft();
       break;
@@ -191,27 +183,27 @@ void forward()
     digitalWrite( DEBUG_RED, HIGH );
     if( currentDeviation >= previousDeviation )
     { // Deviation increasing, approaching wall
-      leftMotor.setSpeed( ForwardSpeed - (correctionFactor * currentDeviation) - LeftMotorOffset );
+      leftMotor.setSpeed(  ForwardSpeed - (correctionFactor * currentDeviation) - LeftMotorOffset );
       rightMotor.setSpeed( ForwardSpeed );
     }
     else
     { // Deviation decreasing, approaching midline
-      leftMotor.setSpeed( ForwardSpeed - LeftMotorOffset);
-      rightMotor.setSpeed( ForwardSpeed - (correctionFactor * currentDeviation) );
+      leftMotor.setSpeed(  ForwardSpeed - LeftMotorOffset);
+      rightMotor.setSpeed( ForwardSpeed ); 
     }
   }
   else
-  {  // Deviatimg left, slow right motor speed
+  {  // Deviating left, slow right motor speed
     digitalWrite( DEBUG_GREEN, HIGH );
     if( currentDeviation >= previousDeviation )
     { // Deviation increasing, approaching wall
+      leftMotor.setSpeed(  ForwardSpeed - LeftMotorOffset );
       rightMotor.setSpeed( ForwardSpeed - (correctionFactor * currentDeviation) );
-      leftMotor.setSpeed( ForwardSpeed - LeftMotorOffset );
     }
     else
     { // Deviation decreasing, approaching midline
+      leftMotor.setSpeed(  ForwardSpeed - LeftMotorOffset );
       rightMotor.setSpeed( ForwardSpeed );
-      leftMotor.setSpeed( ForwardSpeed - (correctionFactor * currentDeviation) - LeftMotorOffset );
     }
   }
 
@@ -226,7 +218,10 @@ void checkForStateChange()
     currentState = StateTurnApproaching;
   if ( frontSensorDistance < FrontStopDistance && frontSensorDistance > MinimumSensorDistance )
     currentState = StateStop;
+  if ( frontSensorDistance > UltrasonicMaxDistance - 5 && leftSensorDistance > UltrasonicMaxDistance - 5 && rightSensorDistance > UltrasonicMaxDistance - 5 )
+    currentState = StateStop;
 } // end checkForStateChange()
+
 
 /*
  * Disables drift correction watches for turn condition.
@@ -243,19 +238,20 @@ void turnApproaching()
     Serial.print( " Identify Turn ");
   #endif 
 
-  digitalWrite( DEBUG_RED,   HIGH );
-  digitalWrite( DEBUG_GREEN, HIGH );
+  // Blue LED indicates we're in turnApproaching state
+  digitalWrite( DEBUG_RED,   LOW  );
+  digitalWrite( DEBUG_GREEN, LOW  );
+  digitalWrite( DEBUG_BLUE,  HIGH );
 
-
-  if( frontSensorDistance < FrontTurnStartDistance ) // Incoming wall less than FrontTurnStartDistance"
+  if( frontSensorDistance < FrontTurnStartDistance ) // Incoming wall less than FrontTurnStartDistance
   {
     frontSensorPreTurn = frontSensorDistance + FrontSensorOffsetFromSideSensors;
     
-    leftMotor.run( Motor::MotorStop );
+    leftMotor.run(  Motor::MotorStop );
     rightMotor.run( Motor::MotorStop );
     
-    leftMotor.setSpeed( ForwardSpeed - LeftMotorOffset );
-    rightMotor.setSpeed( ForwardSpeed );
+    leftMotor.setSpeed(  TurnSpeed - LeftMotorOffset );
+    rightMotor.setSpeed( TurnSpeed );
     
     if( leftSensorDistance > rightSensorDistance ) // Left wall further away than right
       currentState = StateTurnLeft;
@@ -267,31 +263,57 @@ void turnApproaching()
 
 void turnLeft()
 {
+  digitalWrite( DEBUG_RED, HIGH );
   #ifdef SerialDebugMode
     Serial.print( " Turn Left ");
   #endif 
 
   leftTurn = true;
+
+  static bool didATurn = false;
+
+  if( !didATurn ){  
+    leftMotor.run(  Motor::MotorReverse );
+    rightMotor.run( Motor::MotorForward );
+    didATurn = true;
+  }
+  else
+  {
+    leftMotor.run( Motor::MotorStop  );
+    rightMotor.run( Motor::MotorStop );
+    didATurn = false;
+  }
   
-  leftMotor.run( Motor::MotorReverse );
-  rightMotor.run( Motor::MotorForward );
-  
-  currentState = StateTurnEnding;
+  if (frontSensorDistance >= frontSensorPreTurn + FrontSensorPreturnOffset)
+    currentState = StateTurnEnding; // Ensure turn has started before looking to stop
 } // end turnLeft()
 
 
 void turnRight()
 {
+  digitalWrite( DEBUG_GREEN, HIGH );
   #ifdef SerialDebugMode
     Serial.print( " Turn Right ");
   #endif 
 
   leftTurn = false;
   
-  leftMotor.run( Motor::MotorForward );
-  rightMotor.run( Motor::MotorReverse );
+  static bool didATurn = false;
+
+  if( !didATurn ){
+    leftMotor.run(  Motor::MotorForward );
+    rightMotor.run( Motor::MotorReverse );
+    didATurn = true;
+  }
+  else
+  {
+    leftMotor.run( Motor::MotorStop  );
+    rightMotor.run( Motor::MotorStop );
+    didATurn = false;
+  }
   
-  currentState = StateTurnEnding;
+  if (frontSensorDistance >= frontSensorPreTurn + FrontSensorPreturnOffset)
+    currentState = StateTurnEnding; // Ensure turn has started before looking to stop
 } // end turnRight()
 
 
@@ -303,28 +325,38 @@ void turnEnding()
 
   float currentSensorDistance;
   if ( leftTurn )
-    currentSensorDistance = leftSensorDistance;
-  else
     currentSensorDistance = rightSensorDistance;
+  else
+    currentSensorDistance = leftSensorDistance;
 
   if ( currentSensorDistance <= (frontSensorPreTurn + TurnStopSensorDeviation) && currentSensorDistance >= (frontSensorPreTurn - TurnStopSensorDeviation) )
   {
-    leftMotor.run( Motor::MotorStop );
-    rightMotor.run( Motor::MotorStop );
+    leftMotor.run(  Motor::MotorLock );
+    rightMotor.run( Motor::MotorLock );
     currentState = StateEndTurn;
+    delay( TurnEndingDelayMS );
   }
 } // end turnEnding()
 
 
 void endTurn()
 {
+  static int counter = 0;
+  digitalWrite( DEBUG_RED,   LOW );
+  digitalWrite( DEBUG_GREEN, LOW );
+  digitalWrite( DEBUG_BLUE,  LOW );
   #ifdef SerialDebugMode
-    Serial.print( " Exit Turn ");
+    Serial.print( " Exit Turn " );
   #endif 
-  
-  leftMotor.run( Motor::MotorForward );
+
   rightMotor.run( Motor::MotorForward );
+  leftMotor.run(  Motor::MotorForward );
   
-  if( abs( leftSensorDistance - rightSensorDistance ) < TurnExitedDeviation )
-    currentState = StateForward;
+  if( counter >= TurnEndCountDelay && abs( leftSensorDistance - rightSensorDistance ) < TurnExitedDeviation )
+  {
+    currentState = StateStop; // StateForward
+    counter = 0;
+  }
+
+  counter++;
 } // end endTurn()
