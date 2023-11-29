@@ -5,6 +5,8 @@
 
 //#define SerialDebugMode
 //#define DisableTurn
+
+
 // ----------- CONFIGURATION CONSTANTS ----------- //
 // Ultrasonic Sensors
 #define FrontSensorPollDivsor 2
@@ -14,38 +16,31 @@
 #define FrontSensorPreturnOffset 4
 
 // State Change Parameters
-#define MinimumSensorDistance 0.1
-#define FrontStopDistance 5
-#define FrontTurnApproachingDistance 13
-#define FrontTurnStartDistance 25
-#define FinishTurnDelay 100
-#define TurnStopSensorDeviation 3
-#define TurnExitedDeviation 10
-#define TurnEndingDelayMS 200
-#define TurnEndCountDelay 20
+#define MinimumSensorDistance 0.01
+#define FrontStopDistance 1.5
+#define FrontTurnApproachingDistance 25
+#define FrontTurnStartDistance 17
+#define TurnStopSensorDeviation 2.5
+#define TurnExitedDeviation 30
+#define TurnEndingDelayMS 500
+#define TurnEndCountDelay 10
 
 // Motor Speed Parameters
-#define LeftMotorOffset 20
+#define AdjustValue 2
+#define LeftMotorOffset 21
 #define LeftMotorSpeedCompensation 0
 #define RightMotorSpeedCompensation 0
 #define StartSpeed (MaxAdjustSpeed + MinAdjustSpeed) / 2
 #define ForwardSpeed 225
-#define correctionFactor 10
+#define CourseCorrectCorrectionFactor 20
 #define RampSpeedIncrement 2
 #define MinimumSpeed 120
-#define MinAdjustSpeed 120
+#define MinAdjustSpeed 140
 #define MaxAdjustSpeed 235
-#define TurnSpeed MinAdjustSpeed
+#define TurnSpeed ForwardSpeed
+#define TurnSoftwarePWMMaxCount 1
 
 
-
-// Course Correction Parameters
-#define AdjustmentTimeoutLimit 20
-#define AdjustValue 2
-#define SignificantSensorDeviation 2.0
-#define SignificantCorrectionDeviation 0.2
-#define MaxAngledDistance 27.0
-#define SensorChangeMultiplier 2.0
 
 // ----------- PIN CONSTANTS ----------- //
 
@@ -76,6 +71,7 @@ const byte DEBUG_RED = 11; // Black wire, Red LED
 const byte DEBUG_GREEN = 13; // Brown wire, Green LED
 const byte DEBUG_BLUE = 3; // Red wire, Blue LED
 // const byte DEBUG_B = ;
+
 
 // Check validity of parametric configurations
 #if MinAdjustSpeed < MinimumSpeed

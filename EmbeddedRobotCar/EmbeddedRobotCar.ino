@@ -40,9 +40,9 @@ void setup()
   leftSensor  = UltrasonicSensor( LEFT_TRIG,  LEFT_ECHO  );
   rightSensor = UltrasonicSensor( RIGHT_TRIG, RIGHT_ECHO );
 
-  pinMode( DEBUG_RED, OUTPUT );
+  pinMode( DEBUG_RED,   OUTPUT );
   pinMode( DEBUG_GREEN, OUTPUT );
-  pinMode( DEBUG_BLUE, OUTPUT );
+  pinMode( DEBUG_BLUE,  OUTPUT );
 
   #ifdef SerialDebugMode
   Serial.begin( 9600 );
@@ -103,12 +103,12 @@ void checkSensors()
   }
 
   #ifdef SerialDebugMode
-  Serial.print( "Left: ");
-  Serial.print( leftSensorDistance);
-  Serial.print( " | Right: ");
-  Serial.print( rightSensorDistance);
-  Serial.print( " | Front: ");
-  Serial.print( frontSensorDistance);
+  Serial.print( "Left: " );
+  Serial.print( leftSensorDistance );
+  Serial.print( " | Right: " );
+  Serial.print( rightSensorDistance );
+  Serial.print( " | Front: " );
+  Serial.print( frontSensorDistance );
   #endif
 } // end checkSensors()
 
@@ -118,8 +118,12 @@ void stop()
     Serial.print( " Stop ");
   #endif 
 
-  leftMotor.run(  Motor::MotorStop );
-  rightMotor.run( Motor::MotorStop );
+  digitalWrite( DEBUG_RED,   LOW );
+  digitalWrite( DEBUG_BLUE,  LOW );
+  digitalWrite( DEBUG_GREEN, LOW );
+
+  leftMotor.run(  Motor::MotorLock );
+  rightMotor.run( Motor::MotorLock );
 } // end stop()
 
 
@@ -129,10 +133,10 @@ void start()
     Serial.print( " Start ");
   #endif 
 
-  static int Speed = MinimumSpeed;
+  static int Speed = MinAdjustSpeed;
   leftMotor.setSpeed(  Speed - LeftMotorOffset );
   rightMotor.setSpeed( Speed );
-  if (Speed == MinimumSpeed) // If first iteration
+  if (Speed == MinAdjustSpeed) // If first iteration
   {
     rightMotor.run( Motor::MotorForward );
     leftMotor.run(  Motor::MotorForward );
@@ -140,7 +144,7 @@ void start()
   else if (Speed >= StartSpeed)
   {
     currentState = StateForward;
-    Speed = MinimumSpeed;
+    Speed = MinAdjustSpeed;
     return;
   }
   Speed+=RampSpeedIncrement;
@@ -149,7 +153,7 @@ void start()
   if (Speed >= StartSpeed)
   {
     currentState = StateForward;
-    Speed = MinimumSpeed;
+    Speed = MinAdjustSpeed;
     return;
   }
   Speed+=RampSpeedIncrement;
@@ -180,29 +184,29 @@ void forward()
   // Course Correction Code
   if( leftSensorDistance > rightSensorDistance ) 
   {  // Deviating right, slow left motor speed 
-    digitalWrite( DEBUG_RED, HIGH );
+  //  digitalWrite( DEBUG_RED, HIGH );
     if( currentDeviation >= previousDeviation )
     { // Deviation increasing, approaching wall
-      leftMotor.setSpeed(  ForwardSpeed - (correctionFactor * currentDeviation) - LeftMotorOffset );
+      leftMotor.setSpeed(  ForwardSpeed - LeftMotorOffset - (CourseCorrectCorrectionFactor * currentDeviation) );
       rightMotor.setSpeed( ForwardSpeed );
     }
     else
     { // Deviation decreasing, approaching midline
       leftMotor.setSpeed(  ForwardSpeed - LeftMotorOffset);
-      rightMotor.setSpeed( ForwardSpeed ); 
+      rightMotor.setSpeed( ForwardSpeed  - (CourseCorrectCorrectionFactor * currentDeviation) ); 
     }
   }
   else
   {  // Deviating left, slow right motor speed
-    digitalWrite( DEBUG_GREEN, HIGH );
+  //  digitalWrite( DEBUG_GREEN, HIGH );
     if( currentDeviation >= previousDeviation )
     { // Deviation increasing, approaching wall
       leftMotor.setSpeed(  ForwardSpeed - LeftMotorOffset );
-      rightMotor.setSpeed( ForwardSpeed - (correctionFactor * currentDeviation) );
+      rightMotor.setSpeed( ForwardSpeed - (CourseCorrectCorrectionFactor * currentDeviation) );
     }
     else
     { // Deviation decreasing, approaching midline
-      leftMotor.setSpeed(  ForwardSpeed - LeftMotorOffset );
+      leftMotor.setSpeed(  ForwardSpeed - LeftMotorOffset - (CourseCorrectCorrectionFactor * currentDeviation) );
       rightMotor.setSpeed( ForwardSpeed );
     }
   }
@@ -217,7 +221,7 @@ void checkForStateChange()
   if ( frontSensorDistance < FrontTurnApproachingDistance && frontSensorDistance > MinimumSensorDistance )
     currentState = StateTurnApproaching;
   if ( frontSensorDistance < FrontStopDistance && frontSensorDistance > MinimumSensorDistance )
-    currentState = StateStop;
+    currentState = StateStop; // No Wall Ramming?
   if ( frontSensorDistance > UltrasonicMaxDistance - 5 && leftSensorDistance > UltrasonicMaxDistance - 5 && rightSensorDistance > UltrasonicMaxDistance - 5 )
     currentState = StateStop;
 } // end checkForStateChange()
@@ -225,8 +229,8 @@ void checkForStateChange()
 
 /*
  * Disables drift correction watches for turn condition.
- * Should be in this state while the incoming wall is between 15 and 30 inches.
- * At 15 inches, should see which side is open and change to turn state in that direction.
+ * Should be in this state while the incoming wall is between 17 and 25 inches.
+ * At 17 inches, should see which side is open and change to turn state in that direction.
  */
 void turnApproaching()
 { 
@@ -239,8 +243,6 @@ void turnApproaching()
   #endif 
 
   // Blue LED indicates we're in turnApproaching state
-  digitalWrite( DEBUG_RED,   LOW  );
-  digitalWrite( DEBUG_GREEN, LOW  );
   digitalWrite( DEBUG_BLUE,  HIGH );
 
   if( frontSensorDistance < FrontTurnStartDistance ) // Incoming wall less than FrontTurnStartDistance
@@ -254,66 +256,94 @@ void turnApproaching()
     rightMotor.setSpeed( TurnSpeed );
     
     if( leftSensorDistance > rightSensorDistance ) // Left wall further away than right
+    { 
       currentState = StateTurnLeft;
+      digitalWrite( DEBUG_BLUE, LOW );
+    }
     else  // Right wall further away than left
+    {
       currentState = StateTurnRight;
+      digitalWrite( DEBUG_BLUE, LOW );
+    }
   }
 } // end turnApproaching()
 
 
 void turnLeft()
-{
-  digitalWrite( DEBUG_RED, HIGH );
+{ 
   #ifdef SerialDebugMode
     Serial.print( " Turn Left ");
   #endif 
 
+  // Visual indicator: in StateTurnLeft
+  digitalWrite( DEBUG_GREEN, HIGH  );
+
   leftTurn = true;
 
-  static bool didATurn = false;
+  static int lastTurnCounter = 0;
 
-  if( !didATurn ){  
+  // Slow turn by pulsing motors
+  if( lastTurnCounter == TurnSoftwarePWMMaxCount )
+  {  
     leftMotor.run(  Motor::MotorReverse );
     rightMotor.run( Motor::MotorForward );
-    didATurn = true;
+    lastTurnCounter = 0;
   }
   else
   {
     leftMotor.run( Motor::MotorStop  );
     rightMotor.run( Motor::MotorStop );
-    didATurn = false;
+    lastTurnCounter++;
   }
   
   if (frontSensorDistance >= frontSensorPreTurn + FrontSensorPreturnOffset)
+  {
+    leftMotor.run(  Motor::MotorReverse );
+    rightMotor.run( Motor::MotorForward );
     currentState = StateTurnEnding; // Ensure turn has started before looking to stop
+
+    // Clear LEDs
+    digitalWrite( DEBUG_GREEN, LOW );
+  }
 } // end turnLeft()
 
 
 void turnRight()
-{
-  digitalWrite( DEBUG_GREEN, HIGH );
+{  
   #ifdef SerialDebugMode
     Serial.print( " Turn Right ");
   #endif 
 
+  // Visual indicator: in StateTurnRight
+  digitalWrite( DEBUG_RED,   HIGH );
+
   leftTurn = false;
   
-  static bool didATurn = false;
+  static int lastTurnCounter = 0;
 
-  if( !didATurn ){
+  // Slow turn by pulsing motors
+  if( lastTurnCounter == TurnSoftwarePWMMaxCount )
+  {  
     leftMotor.run(  Motor::MotorForward );
     rightMotor.run( Motor::MotorReverse );
-    didATurn = true;
+    lastTurnCounter = 0;
   }
   else
   {
-    leftMotor.run( Motor::MotorStop  );
+    leftMotor.run(  Motor::MotorStop );
     rightMotor.run( Motor::MotorStop );
-    didATurn = false;
+    lastTurnCounter++;
   }
   
   if (frontSensorDistance >= frontSensorPreTurn + FrontSensorPreturnOffset)
+  {
+    leftMotor.run(  Motor::MotorForward );
+    rightMotor.run( Motor::MotorReverse );
     currentState = StateTurnEnding; // Ensure turn has started before looking to stop
+
+    // Clear LEDs
+    digitalWrite( DEBUG_RED,   LOW );
+  }
 } // end turnRight()
 
 
@@ -323,17 +353,43 @@ void turnEnding()
     Serial.print( " Finish Turn ");
   #endif 
 
+  digitalWrite( DEBUG_BLUE, HIGH );
+  
   float currentSensorDistance;
   if ( leftTurn )
     currentSensorDistance = rightSensorDistance;
   else
     currentSensorDistance = leftSensorDistance;
 
+  // Slow turn by pulsing motors
+  static int lastTurnCounter = 0;
+  if( lastTurnCounter == TurnSoftwarePWMMaxCount )
+  {  
+    if( leftTurn )
+    {
+      leftMotor.run(  Motor::MotorForward );
+      rightMotor.run( Motor::MotorReverse );
+    }
+    else
+    {
+      leftMotor.run(  Motor::MotorReverse );
+      rightMotor.run( Motor::MotorForward );
+    }
+    lastTurnCounter = 0;
+  }
+  else
+  {
+    leftMotor.run(  Motor::MotorStop );
+    rightMotor.run( Motor::MotorStop );
+    lastTurnCounter++;
+  }
+  
   if ( currentSensorDistance <= (frontSensorPreTurn + TurnStopSensorDeviation) && currentSensorDistance >= (frontSensorPreTurn - TurnStopSensorDeviation) )
   {
     leftMotor.run(  Motor::MotorLock );
     rightMotor.run( Motor::MotorLock );
     currentState = StateEndTurn;
+    lastTurnCounter = 0;  // Reset for next turn
     delay( TurnEndingDelayMS );
   }
 } // end turnEnding()
@@ -342,20 +398,36 @@ void turnEnding()
 void endTurn()
 {
   static int counter = 0;
-  digitalWrite( DEBUG_RED,   LOW );
-  digitalWrite( DEBUG_GREEN, LOW );
-  digitalWrite( DEBUG_BLUE,  LOW );
+  digitalWrite( DEBUG_RED,   HIGH );
+  digitalWrite( DEBUG_GREEN, HIGH );
+  digitalWrite( DEBUG_BLUE,  LOW  );
   #ifdef SerialDebugMode
     Serial.print( " Exit Turn " );
   #endif 
 
-  rightMotor.run( Motor::MotorForward );
-  leftMotor.run(  Motor::MotorForward );
-  
-  if( counter >= TurnEndCountDelay && abs( leftSensorDistance - rightSensorDistance ) < TurnExitedDeviation )
+  // Ramp Up Motor speed
+  static int Speed = MinAdjustSpeed;
+  leftMotor.setSpeed(  Speed - LeftMotorOffset );
+  rightMotor.setSpeed( Speed );
+  if (Speed == MinAdjustSpeed) // If first iteration
   {
-    currentState = StateStop; // StateForward
+    rightMotor.run( Motor::MotorForward );
+    leftMotor.run(  Motor::MotorForward );
+  }
+  Speed+=RampSpeedIncrement;
+  rightMotor.setSpeed( Speed );
+  leftMotor.setSpeed(  Speed - LeftMotorOffset );
+  if (Speed < ForwardSpeed)
+    Speed+=RampSpeedIncrement;
+  
+  if( counter >= TurnEndCountDelay && (rightSensorDistance + leftSensorDistance) < TurnExitedDeviation )
+  { // Exited corner of course
+    Speed = MinAdjustSpeed;
+    currentState = StateForward;
     counter = 0;
+    digitalWrite( DEBUG_RED,   LOW );
+    digitalWrite( DEBUG_GREEN, LOW );
+    digitalWrite( DEBUG_BLUE,  LOW );
   }
 
   counter++;
