@@ -16,7 +16,7 @@ We decided to use a finite state machine approach to developing the code for thi
 
 Since this project is so heavily dependent on hardware as well as software, mental logic and debugging only works so well.
 Therefore, we tested our robot many times on a demo course we built using a corner of a room and a table on its side.
-This allowed us to rapidly test and prototype ideas and code, and spend less time trying to think and understand exactly what our code will be doing (ramming our heads into the code/wall) while spending more time driving the front (and sometimes even the head) of the robot into the wall.
+This allowed us to rapidly test and prototype ideas and code, and spend less time trying to think and understand exactly what our code will actually be doing (ramming our heads into the code/wall) while spending more time driving the front (and sometimes even the head) of the robot into the wall and attempting to understand exactly why it did what it did. We found this rapid-prototyping approach to be most effective, particularly since we were only given a month to work on this as a class group assignment, which did not seem like quite enough time in hindsight.
 
 Since this robot is heavily dependent on sensor readings from an Ultrasonic sensor, we determined the robot will be spending a significant amount of time in a measurement state which disables interrupts.
 
