@@ -43,6 +43,9 @@ The project is based on this (https://a.co/d/3Qj6L7B) kit, with some modificatio
 
 ## States Used
 Below is a diagram showing all the states the robot can be in as well as the logical conditions we use to move between states:
+
+Note that the Course Correction state is actually a subfunction of the Forward state and not a separate state nor function.
+
 ![State Transition Diagram](https://github.com/jordankooyman/EmbeddedRobotCar/blob/main/Pictures/Final%20State%20Diagram.jpg)
 
 ## Changes Made
