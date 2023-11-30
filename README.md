@@ -12,7 +12,7 @@ Below is an image of the what the Rover robots’ course may look like.  The wal
 The robot will start inside the first segment facing into the course, so there will be walls on either side of the robot when it first starts moving.  The finish will be after the robot exits the course, either at the far end, or the start end if it gets turned around.
 
 ## Development Methodology
-We decided to use a finite state machine approach to developing the code for this project, as was recommended to us in class.
+We decided to use a finite state machine approach to developing the code for this project, as was recommended to us in class. We poll our Ultrasonic sensors each loop through our main code block, then go to one of the state functions to do an action and potentially change states.
 
 Since this project is so heavily dependent on hardware as well as software, mental logic and debugging only works so well.
 Therefore, we tested our robot many times on a demo course we built using a corner of a room and a table on its side.
