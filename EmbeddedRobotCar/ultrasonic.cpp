@@ -1,19 +1,28 @@
+// File: ultrasonic.cpp
+// Class: CEN 4930, Fall 2023, CRN 84929
+// Contributors: Jordan Kyooyman, David West
+// Description: Class implimentation for ultrasonic sensor component. 
+// -----------------------------------------------------------
+
 #include <Arduino.h>
 #include "config.cpp"
 
 #ifndef ultrasonicFile
 #define ultrasonicFile
+
 // ---------- ULTRASONIC SENSOR CLASS DECLARATIONS ----------- //
 
-class UltrasonicSensor {
+class UltrasonicSensor
+{
 private:
-  byte triggerPin;
-  byte echoPin;
-  int maxDuration;
+  byte triggerPin;            // Arduino pin for ultrasonic trigger
+  byte echoPin;               // Arduino pin for ultrasonic echo
+  int maxDuration;            // Max duration to wait for an echo pulse until timeout
 
 public:
-  /*
-   * Default Constructor
+
+  // ----------------- CONSTRUCTORS ----------------- //
+  /* Default Constructor
    */
   UltrasonicSensor()
   {
@@ -23,8 +32,8 @@ public:
   }
 
 
-  /*
-   * 3-Pin Constructor
+  /* Constructor for 3-pin ultrasonic sensors
+   * where the echo and trigger pin are one pin.
    */
   UltrasonicSensor( byte sensorPin )
   {
@@ -34,8 +43,8 @@ public:
   }
 
 
-  /*
-   * 4-Pin Constructor
+  /* Constructor for 4-pin ultrasonic sensors
+   * where the echo and trigger pins are their own pins.
    */
   UltrasonicSensor( byte tPin, byte ePin )
   {
@@ -45,19 +54,21 @@ public:
   }
 
 
+  // ----------------- CLASS DECLARATIONS AND DEFINITIONS ----------------- //
   /*
-   * Measures distance to closest object in cone.
+   * Measures distance to closest object in a cone.
    * Returns distance in inches (double).
    */
   double measureInches()
   {
     double distance = measure() / 74.0;
-    
+
+    // If measurement is outside acceptable range, return max distance
     if ( distance < 0.01 || distance > UltrasonicTimeoutReturnDistance )
       return UltrasonicTimeoutReturnDistance;
     
     return distance;
-  }
+  } // end measureInches()
 
 
   /*
@@ -72,7 +83,7 @@ public:
       return UltrasonicTimeoutReturnDistance;
     
     return distance;
-  }
+  } // end measureCentimeters()
 
 
 private: 
@@ -91,6 +102,7 @@ private:
     noInterrupts();					// An interupt will throw off the measurement
     unsigned long duration = 0;
 
+    // Begin Measurement
     pinMode( echoPin, INPUT );
     digitalWrite( echoPin, LOW );
     pinMode( triggerPin, OUTPUT );
@@ -102,16 +114,18 @@ private:
     delayMicroseconds(10);
     digitalWrite( triggerPin, LOW );
 
+    // Wait for Response (with timeout)
     pinMode( echoPin, INPUT );
     duration = pulseIn( echoPin, HIGH, maxDuration );
 
-    interrupts();
+    interrupts();        // Reenable Interrupts
 
-    if( duration > 0 )
+    if( duration > 0 )   // If there is a reading, account for round trip time
       duration /= 2.0;
 
     return duration;
   } // end measure()
-};
+
+}; // end Ultrasonic class
 
 #endif
